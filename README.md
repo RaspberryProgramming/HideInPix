@@ -13,7 +13,7 @@ Example Code using as library
 ```
 from HideInPix import *
 
-encode(b'hello world', 'input.png', 'output.png')
+encode(b'hello world', 'input.jpg', 'output.png')
 
 print(decode('output.png').decode())
 ```
@@ -27,7 +27,7 @@ file = open("CoolImage.jpg", 'rb') # Make sure you use rb to read in as byte dat
 data = file.read()
 file.close()
 
-encode(data, 'input.png', 'output.png')
+encode(data, 'input.jpg', 'output.png')
 ```
 
 Decoding and writing to file
