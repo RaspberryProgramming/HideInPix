@@ -185,6 +185,6 @@ def imread(imdata, length):
 
 if __name__ in '__main__':
     print("Encode")
-    encode(b'Hello World', 'input.png', 'output.png')
+    encode(b'Hello World', 'input.jpg', 'output.png')
     print("Decode")
     print(decode('output.png').decode())
