@@ -1,7 +1,4 @@
 from keras.preprocessing.image import load_img, save_img, img_to_array, array_to_img
-import time
-
-
 
 def byte2bin(data):
     """
