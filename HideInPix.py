@@ -209,7 +209,7 @@ def main():
 
             # Some parameter is necessary to encode
             print('[!] Please use --text or --file argument to pass input')
-            args.print_help()
+            parser.print_help()
             return None
 
         # Encode data into file
@@ -221,7 +221,7 @@ def main():
         else:
             # File must be passed when decoding
             print("Please pass --file parameter")
-            args.print_help()
+            parser.print_help()
             return None
             
         data = decode(filename) # Decode the data
@@ -239,7 +239,7 @@ def main():
             print(data)
 
     else:
-        args.print_help()
+        parser.print_help()
 
 if __name__ in '__main__':
     main()
