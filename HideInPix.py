@@ -1,4 +1,5 @@
 from keras.preprocessing.image import load_img, save_img, img_to_array, array_to_img
+import argparse
 
 def byte2bin(data):
     """
@@ -180,8 +181,65 @@ def imread(imdata, length):
     return output
 
 
+def main():
+    parser = argparse.ArgumentParser(description='Program for hiding binary data within images.')
+
+    parser.add_argument('-e', '--encode', help='Encode Data into an image')
+    parser.add_argument('-d', '--decode', help='Decode Data from an image')
+    parser.add_argument('-t', '--text', help='Text input that will be used to encode')
+    parser.add_argument('-f', '--file', help='File input that will be used to encode or decode')
+    parser.add_argument('-of', '--outputfile', help='The filename used as output. If encoding, the file will be the image with encoded data, if decoding the file will store the output of the decoding process')
+
+    args = parser.parse_args()
+
+    if args.encode:
+        if args.text:
+            
+            # Store text from parameter
+            data = args.text.encode()
+
+        elif args.file:
+            
+            # Read file
+            f = open(args.file, 'rb')
+            data = f.read()
+            f.close()
+
+        else:
+
+            # Some parameter is necessary to encode
+            print('[!] Please use --text or --file argument to pass input')
+            args.print_help()
+            return None
+
+        # Encode data into file
+        encode(data, args.encode, args.outputfile)
+
+    elif args.decode:
+        if args.file:
+            filename = args.file
+        else:
+            # File must be passed when decoding
+            print("Please pass --file parameter")
+            args.print_help()
+            return None
+            
+        data = decode(filename) # Decode the data
+
+        if args.outputfile:
+            # Write data to file
+
+            f = open(args.outfile, 'wb')
+            
+            f.write(data)
+            
+            f.close()
+        else:
+            # Print output of decode
+            print(data)
+
+    else:
+        args.print_help()
+
 if __name__ in '__main__':
-    print("Encode")
-    encode(b'Hello World', 'input.jpg', 'output.png')
-    print("Decode")
-    print(decode('output.png').decode())
+    main()
