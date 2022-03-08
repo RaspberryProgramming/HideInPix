@@ -1,5 +1,6 @@
 from keras.preprocessing.image import load_img, save_img, img_to_array, array_to_img
 import argparse
+from math import sqrt
 
 def byte2bin(data):
     """
@@ -12,10 +13,8 @@ def byte2bin(data):
         string of binary 1s and 0s
     """
     out = ""
-
     for byte in data:
         out += f'{byte:0>8b}'
-
     return out
 
 def bin2byte(data):
@@ -26,7 +25,7 @@ def bin2byte(data):
         data: string of1s and 0s
     
     Returns:
-        python byte data
+        python byte data 
     """
 
     v = int(data, 2)
@@ -38,7 +37,7 @@ def bin2byte(data):
     
     return bytes(b[::-1])
 
-def encode(data, input_path, output_path="output.png"):
+def encode(data, input_path, output_path="output.png", bit_size=1):
     """
     encode:
         Encode some data into an image. encode converts some byte data to be inserted into an image.
@@ -49,6 +48,7 @@ def encode(data, input_path, output_path="output.png"):
         data: the byte data that is to be inserted into the input image
         input_path: path to the input image
         output_path: path for where to write output image file. default to output.png and should stay as a png as it uses lossless compression
+        bit_size: number of pixels that each bit should take up. This can only be a square (we need to square root this number) Default: 1
 
     Writes:
         image to output_path
@@ -73,6 +73,8 @@ def encode(data, input_path, output_path="output.png"):
     data = list(data) # Convert to list to make increase encoding speed
                       # Using a list to access each item was faster than using a string
 
+    bit_size = int(sqrt(bit_size))
+
     imdata = img_to_array(img) # convert image to np array
 
     print("")
@@ -82,35 +84,25 @@ def encode(data, input_path, output_path="output.png"):
     # break wasn't working so using try was necessary
     try:
         # Iterate through entirety of the image data
-        for i in range(len(imdata)):
-            for j in range(len(imdata[i])):
-                # Print Progress each pixel of image
-                print("\r", 100*(d/datalen), "% left", end="")
-                for k in range(len(imdata[i][j])):
-                    # If we have more data to insert to the image
-                    if d < datalen:
+        for i in range(0,len(imdata), bit_size):
+            # Print the progress
+            print("\r", 100*(d/datalen), "% left", end="")
 
-                        # Check if current color in our pixel is even/odd
-                        tmpdat = imdata[i][j][k]
-                        odd = tmpdat % 2 == 1
-                        
-                        # If Odd and data is 0, make data even
-                        if odd and data[d] == "0":
-                            imdata[i][j][k] = tmpdat - 1
-                        
-                        # If NOT Odd and data is 1, make data odd
-                        elif not odd and data[d] == "1":                        
-                            if tmpdat == 0:
-                                imdata[i][j][k] = tmpdat + 1
-                            else:
-                                imdata[i][j][k] = tmpdat - 1
+            for j in range(0, len(imdata[i]), bit_size):
 
-                        # Increment d
-                        d += 1
+                # If we have more data to insert to the image
+                if d < datalen:
+                    
+                    print(data[d], end='')
+                    # Check if current color in our pixel is even/odd
+                    imdata = oddify_group((i, j), (bit_size, bit_size), data[d], imdata)
 
-                    else:
-                        # Finished inserting data to image
-                        raise StopIteration
+                    # Increment d
+                    d += 1
+
+                else:
+                    # Finished inserting data to image
+                    raise StopIteration
     except StopIteration:
         pass
 
@@ -118,14 +110,15 @@ def encode(data, input_path, output_path="output.png"):
 
     img_pil = array_to_img(imdata) # Convert back to image
 
-    save_img(output_path, img_pil) # Save output to output_path
+    save_img(output_path, img_pil, quality=100, optimize=False, progressive=False) # Save output to output_path
 
-def decode(input_path):
+def decode(input_path, bit_size=1):
     """
     decode: decodes data inserted into image
 
     Takes:
         input_path: path to file with inserted data
+        bit_size: number of pixels that each bit should take up. This can only be a square (we need to square root this number) Default: 1
     
     Returns:
         Byte data containing data that was encoded within input image file.
@@ -135,7 +128,7 @@ def decode(input_path):
 
     imdata = img_to_array(img) # Convert to numpy array
 
-    header = imread(imdata, 1024)# header data
+    header = imread(imdata, 1024, bit_size)# header data
 
     # Read first half of header which is the size
     size = int(bin2byte(header[:512])) # Extract data size from header section
@@ -147,14 +140,14 @@ def decode(input_path):
 
     outsize = 1024+size # Used to keep track of how big the output should be
 
-    output = imread(imdata, outsize) # Reset output
+    output = imread(imdata, outsize, bit_size) # Reset output
     
     # Skipping the header, read the data from our output
     output = bin2byte(output[1024:])
 
     return output
 
-def imread(imdata, length):
+def imread(imdata, length, bit_size=1):
     """
     imread: read binary from image
 
@@ -163,22 +156,67 @@ def imread(imdata, length):
         length: length of the data we're reading
     """
 
+    bit_size = int(sqrt(bit_size))
+
     output = ""
 
     try:
-        for i in imdata:
-            for j in i:
-                for k in j:
+        for i in range(0, len(imdata), bit_size):
+            for j in range(0, len(imdata[i]), bit_size):
 
-                    # get remainder of k/2 and convert to int->str
-                    output += str(int(k%2))
+                # get remainder of k/2 and convert to int->str
+                output += str(int(imdata[i][j][0]%2))
 
-                    if len(output) >= length: # Only read first 1024 bits since this is the header
-                        raise StopIteration
+                if len(output) >= length: # Only read first 1024 bits since this is the header
+                    raise StopIteration
     except StopIteration:
         pass
+    
 
     return output
+
+def oddify_group(start, dim, val, data):
+    """
+    oddify_group: change group value based on start pos and dimensions
+    
+    start: start position in data
+    dim: dimensions to change
+    val: value (1 or 0) used for truth in oddify
+    data: data to modify
+    """
+
+    for i in range(start[0], start[0]+dim[0]):
+        for j in range(start[1], start[1]+dim[1]):
+            
+            for k in range(len(data[0][0])):
+                
+                data[i][j][k] = oddify(data[i][j][k], val)
+
+    return data
+
+def oddify(val, truth="0"):
+    """
+    oddify: makes a number odd if truth is 1
+
+    truth: used to determine if this value should be odd or not, 
+           using binary to represent truth. This value is also taken as a string.
+    """
+
+    odd = val % 2 == 1
+                    
+    # If Odd and data is 0, make data even
+    if odd and truth == "0":
+        return val - 1
+        
+    
+    # If NOT Odd and data is 1, make data odd
+    elif not odd and truth == "1":
+        if val == "0":
+            return val + 1
+        else:
+            return val - 1
+
+    return val
 
 
 def main():
@@ -188,9 +226,18 @@ def main():
     parser.add_argument('-d', '--decode', help='Decode Data from an image')
     parser.add_argument('-t', '--text', help='Text input that will be used to encode')
     parser.add_argument('-f', '--file', help='File input that will be used to encode or decode')
-    parser.add_argument('-of', '--outputfile', help='The filename used as output. If encoding, the file will be the image with encoded data, if decoding the file will store the output of the decoding process')
+    parser.add_argument('-bs', '--bit_size', help="""Number of pixels each bit will take up. This can be used to help obfuscate the data.
+                                                     This will result in increased compute time and decreased usable space. Also, this must
+                                                     be a squared number.""")
+    parser.add_argument('-of', '--outputfile', help="""The filename used as output. If encoding, the file will be the image with encoded data,
+                                                       if decoding the file will store the output of the decoding process""")
 
     args = parser.parse_args()
+
+    if args.bit_size:
+        bit_size = args.bit_size
+    else:
+        bit_size = 1
 
     if args.encode:
         if args.text:
@@ -216,15 +263,8 @@ def main():
         encode(data, args.encode, args.outputfile)
 
     elif args.decode:
-        if args.file:
-            filename = args.file
-        else:
-            # File must be passed when decoding
-            print("Please pass --file parameter")
-            parser.print_help()
-            return None
-            
-        data = decode(filename) # Decode the data
+
+        data = decode(args.decode, bit_size=bit_size) # Decode the data
 
         if args.outputfile:
             # Write data to file
