@@ -93,7 +93,6 @@ def encode(data, input_path, output_path="output.png", bit_size=1):
                 # If we have more data to insert to the image
                 if d < datalen:
                     
-                    print(data[d], end='')
                     # Check if current color in our pixel is even/odd
                     imdata = oddify_group((i, j), (bit_size, bit_size), data[d], imdata)
 
