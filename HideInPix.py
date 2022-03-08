@@ -268,7 +268,7 @@ def main():
         if args.outputfile:
             # Write data to file
 
-            f = open(args.outfile, 'wb')
+            f = open(args.outputfile, 'wb')
             
             f.write(data)
             
